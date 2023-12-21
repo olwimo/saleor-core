@@ -9,7 +9,6 @@ from .....discount import models
 from .....discount.error_codes import DiscountErrorCode
 from .....discount.models import Promotion
 from .....permission.enums import DiscountPermissions
-from .....product.tasks import update_products_discounted_prices_of_promotion_task
 from .....webhook.event_types import WebhookEventAsyncType
 from ....channel import ChannelContext
 from ....core import ResolveInfo
@@ -26,6 +25,7 @@ from ...types import Sale
 from ...utils import (
     convert_migrated_sale_predicate_to_catalogue_info,
     create_catalogue_predicate,
+    mark_products_of_promotion_for_recalculate_discounted_price,
 )
 
 
@@ -130,7 +130,7 @@ class SaleCreate(ModelMutation):
             )
             manager = get_plugin_manager_promise(info.context).get()
             cls.send_sale_notifications(manager, promotion, predicate)
-            update_products_discounted_prices_of_promotion_task.delay(promotion.pk)
+            mark_products_of_promotion_for_recalculate_discounted_price(promotion.pk)
         return response
 
     @classmethod

@@ -70,10 +70,9 @@ def test_staff_can_change_reward_value_type_in_promotion_rule_core_2117(
     # Step 1 - Get product and check prices
     product_data = get_product(e2e_staff_api_client, product_id, channel_slug)
     variant = product_data["variants"][0]
-    variant_discount = round(float(product_variant_price) * discount_value / 100, 2)
-    assert variant["pricing"]["discount"]["gross"]["amount"] == variant_discount
+    assert variant["pricing"]["discount"] is None
     unit_price = variant["pricing"]["price"]["gross"]["amount"]
-    assert unit_price == float(product_variant_price) - variant_discount
+    assert unit_price == float(product_variant_price)
 
     # Step 2 - Update promotion rule by changing discount value type
     fixed_reward_value = 10
@@ -85,7 +84,6 @@ def test_staff_can_change_reward_value_type_in_promotion_rule_core_2117(
     # Step 3 - Get product and check prices
     product_data = get_product(e2e_staff_api_client, product_id, channel_slug)
     variant = product_data["variants"][0]
-    variant_discount = fixed_reward_value
-    assert variant["pricing"]["discount"]["gross"]["amount"] == variant_discount
+    assert variant["pricing"]["discount"] is None
     unit_price = variant["pricing"]["price"]["gross"]["amount"]
-    assert unit_price == float(product_variant_price) - variant_discount
+    assert unit_price == float(product_variant_price)

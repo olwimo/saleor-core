@@ -32,6 +32,7 @@ from ...utils import (
     create_catalogue_predicate,
     get_products_for_rule,
     get_variants_for_predicate,
+    mark_products_for_recalculate_discounted_price,
 )
 from ..utils import update_variants_for_promotion
 from .sale_create import SaleInput
@@ -198,7 +199,7 @@ class SaleUpdate(ModelMutation):
             )
             update_variants_for_promotion(variants, promotion)
             if product_ids | previous_product_ids:
-                update_discounted_prices_task.delay(list(product_ids))
+                mark_products_for_recalculate_discounted_price(list(product_ids))
 
     @classmethod
     def send_sale_notifications(

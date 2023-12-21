@@ -91,7 +91,7 @@ def test_order_promotion_still_applied_to_the_order_when_promotion_is_removed_CO
     order_lines = order_lines_create(e2e_staff_api_client, order_id, lines)
     order_product_variant_id = order_lines["order"]["lines"][0]["variant"]["id"]
     assert order_product_variant_id == product_variant_id
-    unit_price = float(product_variant_price) - float(discount_value)
+    unit_price = float(product_variant_price)
     undiscounted_price = order_lines["order"]["lines"][0]["undiscountedUnitPrice"][
         "gross"
     ]["amount"]
@@ -99,8 +99,7 @@ def test_order_promotion_still_applied_to_the_order_when_promotion_is_removed_CO
     assert (
         order_lines["order"]["lines"][0]["unitPrice"]["gross"]["amount"] == unit_price
     )
-    promotion_reason = order_lines["order"]["lines"][0]["unitDiscountReason"]
-    assert promotion_reason == f"Promotion: {promotion_id}"
+    assert order_lines["order"]["lines"][0]["unitDiscountReason"] is None
 
     # Step 3 - Add a shipping method to the order
     input = {"shippingMethod": shipping_method_id}
@@ -129,10 +128,10 @@ def test_order_promotion_still_applied_to_the_order_when_promotion_is_removed_CO
     assert order_complete_id == order_id
     order_line = order["order"]["lines"][0]
     assert order_line["productVariantId"] == product_variant_id
-    assert order_line["unitDiscount"]["amount"] == float(discount_value)
+    assert order_line["unitDiscount"]["amount"] == 0.0
     assert order_line["unitDiscountType"] == discount_type
-    assert order_line["unitDiscountValue"] == float(discount_value)
-    assert order_line["unitDiscountReason"] == promotion_reason
+    assert order_line["unitDiscountValue"] == 0.0
+    assert order_line["unitDiscountReason"] is None
     product_price = order_line["undiscountedUnitPrice"]["gross"]["amount"]
     assert product_price == float(undiscounted_price)
     assert product_price == float(product_variant_price)

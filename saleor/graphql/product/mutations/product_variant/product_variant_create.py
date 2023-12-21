@@ -4,13 +4,13 @@ import graphene
 from django.core.exceptions import ValidationError
 from django.utils.text import slugify
 
+from ....discount.utils import mark_products_for_recalculate_discounted_price
 from .....attribute import AttributeInputType
 from .....attribute import models as attribute_models
 from .....core.tracing import traced_atomic_transaction
 from .....permission.enums import ProductPermissions
 from .....product import models
 from .....product.error_codes import ProductErrorCode
-from .....product.tasks import update_products_discounted_prices_for_promotion_task
 from .....product.utils.variants import generate_and_set_variant_name
 from ....attribute.types import AttributeValueInput
 from ....attribute.utils import AttributeAssignmentMixin, AttrValuesInput
@@ -315,9 +315,7 @@ class ProductVariantCreate(ModelMutation):
                 instance.product.default_variant = instance
                 instance.product.save(update_fields=["default_variant", "updated_at"])
             # Recalculate the "discounted price" for the parent product
-            update_products_discounted_prices_for_promotion_task.delay(
-                [instance.product_id]
-            )
+            mark_products_for_recalculate_discounted_price([instance.product_id])
             stocks = cleaned_input.get("stocks")
             if stocks:
                 cls.create_variant_stocks(instance, stocks)

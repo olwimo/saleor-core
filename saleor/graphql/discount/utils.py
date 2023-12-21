@@ -1,10 +1,13 @@
 from collections import defaultdict
 from copy import deepcopy
 from enum import Enum
-from typing import Optional, Union, cast
+from typing import Optional, Union, cast, Iterable
+import logging
+from uuid import UUID
 
 import graphene
 from django.db import transaction
+from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import Exists, OuterRef, QuerySet
 from graphene.utils.str_converters import to_camel_case
 
@@ -57,6 +60,30 @@ def get_products_for_promotion(
         promotion, update_rule_variants=update_rule_variants
     )
     return Product.objects.filter(Exists(variants.filter(product_id=OuterRef("id"))))
+
+
+def get_products_for_recalculate_discounted_price(
+    products: ProductsQueryset,
+) -> ProductsQueryset:
+    """Get products that are marked for price recalculation."""
+    return products.filter(recalculate_discounted_price=True)
+
+
+def mark_products_of_promotion_for_recalculate_discounted_price(promotion_pk: UUID):
+    """Mark products of specific promotion for recalculate discounted prices."""
+    try:
+        promotion = Promotion.objects.get(pk=promotion_pk)
+    except ObjectDoesNotExist:
+        logging.warning(f"Cannot find promotion with id: {promotion_pk}.")
+        return
+    products = get_products_for_promotion(promotion)
+    if products:
+        products.update(recalculate_discounted_price=True)
+
+
+def mark_products_for_recalculate_discounted_price(product_ids: Iterable[int]):
+    """Mark products for recalculate discounted prices."""
+    Product.objects.filter(pk__in=product_ids).update(recalculate_discounted_price=True)
 
 
 def get_products_for_rule(

@@ -3,11 +3,13 @@ from unittest.mock import ANY, patch
 
 import graphene
 
+from ...utils import get_products_for_promotion
 from .....discount import PromotionEvents, RewardValueType
 from .....discount.error_codes import PromotionRuleUpdateErrorCode
 from .....discount.models import PromotionEvent
 from ....tests.utils import assert_no_permission, get_graphql_content
 from ...enums import RewardValueTypeEnum
+from .....product.models import Product
 
 PROMOTION_RULE_UPDATE_MUTATION = """
     mutation promotionRuleUpdate($id: ID!, $input: PromotionRuleUpdateInput!) {
@@ -45,9 +47,7 @@ PROMOTION_RULE_UPDATE_MUTATION = """
 
 
 @patch("saleor.plugins.manager.PluginsManager.promotion_rule_updated")
-@patch("saleor.product.tasks.update_discounted_prices_task.delay")
 def test_promotion_rule_update_by_staff_user(
-    update_discounted_prices_task_mock,
     promotion_rule_updated_mock,
     staff_api_client,
     permission_group_manage_discounts,
@@ -59,6 +59,7 @@ def test_promotion_rule_update_by_staff_user(
     product_list,
 ):
     # given
+    products = get_products_for_promotion(promotion)
     permission_group_manage_discounts.user_set.add(staff_api_client.user)
     rule = promotion.rules.create(
         name="Rule",
@@ -129,15 +130,11 @@ def test_promotion_rule_update_by_staff_user(
     assert rule_data["rewardValue"] == reward_value
     assert rule_data["promotion"]["id"] == promotion_id
     assert promotion.rules.count() == rules_count
-    update_discounted_prices_task_mock.assert_called_once()
-    args, _kwargs = update_discounted_prices_task_mock.call_args
-    assert set(args[0]) == {product_list[1].id, product_list[2].id}
     promotion_rule_updated_mock.assert_called_once_with(rule)
+    assert Product.objects.filter(recalculate_discounted_price=True).count() == 2
 
 
-@patch("saleor.product.tasks.update_discounted_prices_task.delay")
 def test_promotion_rule_update_by_app(
-    update_discounted_prices_task_mock,
     app_api_client,
     permission_manage_discounts,
     channel_USD,
@@ -188,7 +185,8 @@ def test_promotion_rule_update_by_app(
     assert rule_data["rewardValue"] == reward_value
     assert rule_data["promotion"]["id"] == promotion_id
     assert promotion.rules.count() == rules_count
-    update_discounted_prices_task_mock.assert_called_once_with([product.id])
+    product.refresh_from_db()
+    assert product.recalculate_discounted_price is True
 
 
 @patch("saleor.product.tasks.update_discounted_prices_task.delay")
@@ -639,9 +637,7 @@ def test_promotion_rule_update_reward_value_invalid_percentage_value(
     assert errors[0]["field"] == "rewardValue"
 
 
-@patch("saleor.product.tasks.update_discounted_prices_task.delay")
 def test_promotion_rule_update_clears_old_sale_id(
-    update_discounted_prices_task_mock,
     staff_api_client,
     permission_group_manage_discounts,
     channel_USD,
@@ -724,12 +720,9 @@ def test_promotion_rule_update_clears_old_sale_id(
     assert rule_data["rewardValue"] == reward_value
     assert rule_data["promotion"]["id"] == promotion_id
     assert promotion.rules.count() == rules_count
-    update_discounted_prices_task_mock.assert_called_once()
-    args, _kwargs = update_discounted_prices_task_mock.call_args
-    assert set(args[0]) == {product_list[1].id, product_list[2].id}
-
     promotion.refresh_from_db()
     assert promotion.old_sale_id is None
+    assert Product.objects.filter(recalculate_discounted_price=True).count() == 2
 
 
 def test_promotion_rule_update_events(

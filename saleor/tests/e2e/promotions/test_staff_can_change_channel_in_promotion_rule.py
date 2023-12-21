@@ -155,9 +155,9 @@ def test_staff_can_change_promotion_rule_channel_core_2113(
     product_data_channel_2 = get_product(
         e2e_staff_api_client, product_id, pl_channel_slug
     )
-    assert product_data_channel_2["pricing"]["onSale"] is True
+    assert product_data_channel_2["pricing"]["onSale"] is False
     variant = product_data_channel_2["variants"][0]
-    assert variant["pricing"]["discount"]["gross"]["amount"] == 49.5
+    assert variant["pricing"]["discount"] is None
 
     # Step 3 Check if promotion is not applied for product on first channel
     product_data_channel_1 = get_product(

@@ -60,9 +60,7 @@ mutation UpdateProductChannelListing(
 
 
 @freeze_time("2023-11-13T14:53:59.655366")
-@patch("saleor.product.tasks.update_discounted_prices_task.delay")
 def test_product_channel_listing_update_as_staff_user(
-    update_discounted_prices_task_mock,
     staff_api_client,
     product,
     permission_manage_products,
@@ -137,7 +135,8 @@ def test_product_channel_listing_update_as_staff_user(
         product_data["channelListings"][1]["availableForPurchase"]
         == available_for_purchase_date.isoformat()
     )
-    update_discounted_prices_task_mock.assert_called_once_with([product.id])
+    product.refresh_from_db()
+    assert product.recalculate_discounted_price is True
 
 
 @freeze_time("2023-11-13T14:53:59.655366")

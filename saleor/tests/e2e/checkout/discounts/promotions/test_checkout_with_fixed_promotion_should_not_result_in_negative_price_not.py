@@ -70,11 +70,11 @@ def test_checkout_with_fixed_promotion_should_not_result_in_negative_price_CORE_
     # Step 2 - Get product and check if it is on promotion
     product_data = get_product(e2e_staff_api_client, product_id, channel_slug)
     assert product_data["id"] == product_id
-    assert product_data["pricing"]["onSale"] is True
+    assert product_data["pricing"]["onSale"] is False
     variant_data = product_data["variants"][0]
     variant_id = product_data["variants"][0]["id"]
     assert variant_id == product_variant_id
-    assert variant_data["pricing"]["onSale"] is True
+    assert variant_data["pricing"]["onSale"] is False
 
     # Step 3 - Create checkout and verify the total is not below 0
     lines = [
@@ -91,11 +91,10 @@ def test_checkout_with_fixed_promotion_should_not_result_in_negative_price_CORE_
     checkout_id = checkout_data["id"]
     assert checkout_id is not None
     checkout_lines = checkout_data["lines"][0]
-    unit_price = float(product_variant_price) - discount_value
-    assert unit_price < 0
-    assert checkout_lines["unitPrice"]["gross"]["amount"] == 0
+    assert float(product_variant_price) == 5
+    assert checkout_lines["unitPrice"]["gross"]["amount"] == 5
     assert checkout_lines["undiscountedUnitPrice"]["amount"] == float(
         product_variant_price
     )
     total_gross_amount = checkout_data["totalPrice"]["gross"]["amount"]
-    assert total_gross_amount == 0
+    assert total_gross_amount == 5

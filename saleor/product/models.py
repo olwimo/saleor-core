@@ -207,6 +207,7 @@ class Product(SeoModel, ModelWithMetadata, ModelWithExternalReference):
         null=True,
         on_delete=models.SET_NULL,
     )
+    recalculate_discounted_price = models.BooleanField(default=False)
 
     objects = managers.ProductManager()
 

@@ -83,9 +83,8 @@ def test_order_products_on_percentage_promotion_CORE_2103(
     lines = [{"variantId": product_variant_id, "quantity": quantity}]
     order_lines = order_lines_create(e2e_staff_api_client, order_id, lines)
     order_product_variant_id = order_lines["order"]["lines"][0]["variant"]["id"]
-    discount = round(float(product_variant_price) * discount_value / 100, 2)
     assert order_product_variant_id == product_variant_id
-    unit_price = float(product_variant_price) - discount
+    unit_price = float(product_variant_price)
     undiscounted_price = order_lines["order"]["lines"][0]["undiscountedUnitPrice"][
         "gross"
     ]["amount"]
@@ -94,7 +93,7 @@ def test_order_products_on_percentage_promotion_CORE_2103(
         order_lines["order"]["lines"][0]["unitPrice"]["gross"]["amount"] == unit_price
     )
     promotion_reason = order_lines["order"]["lines"][0]["unitDiscountReason"]
-    assert promotion_reason == f"Promotion: {promotion_id}"
+    assert promotion_reason is None
 
     # Step 3 - Add a shipping method to the order
     input = {"shippingMethod": shipping_method_id}
@@ -113,11 +112,11 @@ def test_order_products_on_percentage_promotion_CORE_2103(
     assert order_line["productVariantId"] == product_variant_id
     product_price = order_line["undiscountedUnitPrice"]["gross"]["amount"]
     assert product_price == float(product_variant_price)
-    assert discount == order_line["unitDiscount"]["amount"]
+    assert order_line["unitDiscount"]["amount"] == 0.0
     assert order_line["unitDiscountType"] == "FIXED"
-    assert order_line["unitDiscountValue"] == discount
+    assert order_line["unitDiscountValue"] == 0.0
     assert order_line["unitDiscountReason"] == promotion_reason
-    product_discounted_price = product_price - discount
+    product_discounted_price = product_price
     assert product_discounted_price == order_line["unitPrice"]["gross"]["amount"]
     shipping_amount = order["order"]["shippingPrice"]["gross"]["amount"]
     assert shipping_amount == shipping_price

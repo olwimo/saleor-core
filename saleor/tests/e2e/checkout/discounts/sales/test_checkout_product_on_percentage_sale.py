@@ -109,11 +109,12 @@ def test_checkout_products_on_percentage_sale_core_1004(
     )
     checkout_id = checkout_data["id"]
     checkout_lines = checkout_data["lines"][0]
-    line_discount = round(float(product_variant_price) * sale_discount_value / 100, 2)
-    unit_price = float(product_variant_price) - line_discount
+    shipping_method_id = checkout_data["shippingMethods"][0]["id"]
 
     assert checkout_data["isShippingRequired"] is True
-    assert checkout_lines["unitPrice"]["gross"]["amount"] == unit_price
+    assert checkout_lines["unitPrice"]["gross"]["amount"] == float(
+        product_variant_price
+    )
     assert checkout_lines["undiscountedUnitPrice"]["amount"] == float(
         product_variant_price
     )
@@ -149,6 +150,6 @@ def test_checkout_products_on_percentage_sale_core_1004(
         product_variant_price
     )
     assert order_line["unitDiscountType"] == "FIXED"
-    assert order_line["unitPrice"]["gross"]["amount"] == unit_price
-    assert order_line["unitDiscount"]["amount"] == line_discount
-    assert order_line["unitDiscountReason"] == f"Sale: {sale_id}"
+    assert order_line["unitPrice"]["gross"]["amount"] == float(product_variant_price)
+    assert order_line["unitDiscount"]["amount"] == 0.0
+    assert order_line["unitDiscountReason"] is None

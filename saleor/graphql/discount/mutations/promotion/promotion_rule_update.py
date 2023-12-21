@@ -19,7 +19,10 @@ from ....utils.validators import check_for_duplicates
 from ...enums import PromotionRuleUpdateErrorCode
 from ...inputs import PromotionRuleBaseInput
 from ...types import PromotionRule
-from ...utils import get_products_for_rule
+from ...utils import (
+    get_products_for_rule,
+    mark_products_for_recalculate_discounted_price,
+)
 from ..utils import clear_promotion_old_sale_id
 from .validators import (
     clean_fixed_discount_value,
@@ -200,7 +203,7 @@ class PromotionRuleUpdate(ModelMutation):
         products = get_products_for_rule(instance, update_rule_variants=True)
         product_ids = set(products.values_list("id", flat=True)) | previous_product_ids
         if product_ids:
-            update_discounted_prices_task.delay(list(product_ids))
+            mark_products_for_recalculate_discounted_price(list(product_ids))
         clear_promotion_old_sale_id(instance.promotion, save=True)
         app = get_app_promise(info.context).get()
         events.rule_updated_event(info.context.user, app, [instance])

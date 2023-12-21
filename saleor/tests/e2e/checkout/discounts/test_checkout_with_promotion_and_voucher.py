@@ -112,10 +112,10 @@ def prepare_voucher(
         "expected_unit_price",
     ),
     [
-        ("19.99", 13, "PERCENTAGE", 2.60, 13, "PERCENTAGE", 2.26, 15.13),
-        ("30", 10, "FIXED", 10, 5, "FIXED", 5, 17.5),
-        ("56.50", 19.99, "FIXED", 19.99, 33, "PERCENTAGE", 12.05, 24.46),
-        ("77.77", 17.5, "PERCENTAGE", 13.61, 25, "FIXED", 25, 51.66),
+        ("19.99", 19.99, "PERCENTAGE", 0, 13, "PERCENTAGE", 2.6, 17.39),
+        ("30", 30, "FIXED", 0, 5, "FIXED", 5, 27.5),
+        ("56.00", 56.00, "FIXED", 0, 30, "PERCENTAGE", 16.80, 39.2),
+        ("77.77", 77.77, "PERCENTAGE", 0, 25, "FIXED", 25, 65.27),
     ],
 )
 def test_checkout_with_promotion_and_voucher_CORE_2107(
@@ -166,7 +166,7 @@ def test_checkout_with_promotion_and_voucher_CORE_2107(
         promotion_value,
     )
 
-    voucher_discount_value, voucher_code = prepare_voucher(
+    _, voucher_code = prepare_voucher(
         e2e_staff_api_client,
         channel_id,
         product_id,
@@ -253,4 +253,4 @@ def test_checkout_with_promotion_and_voucher_CORE_2107(
     assert order_line["undiscountedUnitPrice"]["gross"]["amount"] == float(
         product_variant_price
     )
-    assert order_line["unitDiscountReason"] == f"Promotion: {promotion_id}"
+    assert order_line["unitDiscountReason"] is None

@@ -6,7 +6,10 @@ import pytest
 from .....discount.error_codes import DiscountErrorCode
 from .....discount.models import Promotion, PromotionRule
 from ....tests.utils import get_graphql_content
-from ...utils import convert_migrated_sale_predicate_to_catalogue_info
+from ...utils import (
+    convert_migrated_sale_predicate_to_catalogue_info,
+    get_products_for_promotion,
+)
 
 SALE_DELETE_MUTATION = """
     mutation DeleteSale($id: ID!) {
@@ -25,11 +28,9 @@ SALE_DELETE_MUTATION = """
 """
 
 
-@patch("saleor.product.tasks.update_discounted_prices_task.delay")
 @patch("saleor.plugins.manager.PluginsManager.sale_deleted")
 def test_sale_delete_mutation(
     deleted_webhook_mock,
-    update_discounted_prices_task_mock,
     staff_api_client,
     promotion_converted_from_sale,
     catalogue_predicate,
@@ -61,7 +62,9 @@ def test_sale_delete_mutation(
         promotion.refresh_from_db()
 
     deleted_webhook_mock.assert_called_once_with(promotion, previous_catalogue)
-    update_discounted_prices_task_mock.assert_called_once()
+    for product in get_products_for_promotion(promotion):
+        product.refresh_from_db()
+        assert product.recalculate_discounted_price is True
 
 
 @patch("saleor.product.tasks.update_discounted_prices_task.delay")

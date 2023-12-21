@@ -1,13 +1,13 @@
 import graphene
 from django.core.exceptions import ValidationError
 
+from ....discount.utils import mark_products_for_recalculate_discounted_price
 from .....attribute import models as attribute_models
 from .....core.tracing import traced_atomic_transaction
 from .....core.utils.editorjs import clean_editor_js
 from .....permission.enums import ProductPermissions
 from .....product import models
 from .....product.error_codes import ProductErrorCode
-from .....product.tasks import update_products_discounted_prices_for_promotion_task
 from ....attribute.types import AttributeValueInput
 from ....attribute.utils import AttrValuesInput, ProductAttributeAssignmentMixin
 from ....channel import ChannelContext
@@ -220,7 +220,7 @@ class ProductCreate(ModelMutation):
     @classmethod
     def post_save_action(cls, info: ResolveInfo, instance, _cleaned_input):
         product = models.Product.objects.prefetched_for_webhook().get(pk=instance.pk)
-        update_products_discounted_prices_for_promotion_task.delay([instance.id])
+        mark_products_for_recalculate_discounted_price([instance.id])
         manager = get_plugin_manager_promise(info.context).get()
         cls.call_event(manager.product_created, product)
 

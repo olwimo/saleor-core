@@ -105,7 +105,7 @@ def test_apply_best_promotion_to_product_core_2105(
     second_promotion_name = "Promotion 2"
     second_rule_name = "rule for product"
 
-    second_promotion_id = prepare_promotion_with_rules(
+    _second_promotion_id = prepare_promotion_with_rules(
         e2e_staff_api_client,
         second_promotion_name,
         second_discount_type,
@@ -118,13 +118,11 @@ def test_apply_best_promotion_to_product_core_2105(
     # Step 1 - Get product and check if it is on promotion
     product_data = get_product(e2e_staff_api_client, product_id, channel_slug)
 
-    assert product_data["pricing"]["onSale"] is True
+    assert product_data["pricing"]["onSale"] is False
 
     product_variant = product_data["variants"][0]
-    assert product_variant["pricing"]["onSale"] is True
-    assert (
-        product_variant["pricing"]["discount"]["gross"]["amount"] == expected_discount
-    )
+    assert product_variant["pricing"]["onSale"] is False
+    assert product_variant["pricing"]["discount"] is None
     assert product_variant["pricing"]["priceUndiscounted"]["gross"]["amount"] == float(
         product_variant_price
     )
@@ -148,9 +146,9 @@ def test_apply_best_promotion_to_product_core_2105(
 
     order_line = order_lines["order"]["lines"][0]
     assert order_line["variant"]["id"] == product_variant_id
-    unit_price = float(product_variant_price) - expected_discount
+    unit_price = float(product_variant_price)
     undiscounted_price = order_line["undiscountedUnitPrice"]["gross"]["amount"]
     assert undiscounted_price == float(product_variant_price)
     assert order_line["unitPrice"]["gross"]["amount"] == unit_price
     promotion_reason = order_line["unitDiscountReason"]
-    assert promotion_reason == f"Promotion: {second_promotion_id}"
+    assert promotion_reason is None

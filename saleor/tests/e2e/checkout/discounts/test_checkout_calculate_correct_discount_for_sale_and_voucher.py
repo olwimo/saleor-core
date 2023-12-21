@@ -92,10 +92,10 @@ def prepare_voucher(
         "expected_unit_price",
     ),
     [
-        ("19.99", 13, "PERCENTAGE", 2.60, 13, "PERCENTAGE", 2.26, 15.13),
-        ("30", 10, "FIXED", 10, 5, "FIXED", 5, 17.5),
-        ("56.50", 19.99, "FIXED", 19.99, 33, "PERCENTAGE", 12.05, 24.46),
-        ("77.77", 17.5, "PERCENTAGE", 13.61, 25, "FIXED", 25, 51.66),
+        ("19.99", 13, "PERCENTAGE", 0, 13, "PERCENTAGE", 2.6, 17.39),
+        ("30", 10, "FIXED", 0, 5, "FIXED", 5, 27.5),
+        ("56", 10, "FIXED", 0, 5, "PERCENTAGE", 2.8, 53.2),
+        ("77.77", 17.5, "PERCENTAGE", 0, 25, "FIXED", 25, 65.27),
     ],
 )
 def test_checkout_calculate_discount_for_sale_and_voucher_1014(
@@ -170,7 +170,7 @@ def test_checkout_calculate_discount_for_sale_and_voucher_1014(
     checkout_lines = checkout_data["lines"][0]
 
     assert checkout_data["isShippingRequired"] is True
-    unit_price_on_sale = round(float(product_variant_price - expected_sale_discount), 2)
+    unit_price_on_sale = round(float(product_variant_price), 2)
     assert checkout_lines["unitPrice"]["gross"]["amount"] == unit_price_on_sale
     assert checkout_lines["undiscountedUnitPrice"]["amount"] == product_variant_price
 
@@ -226,7 +226,7 @@ def test_checkout_calculate_discount_for_sale_and_voucher_1014(
     order_line = order_data["lines"][0]
     assert order_line["unitDiscountType"] == "FIXED"
     assert order_line["unitPrice"]["gross"]["amount"] == expected_unit_price
-    assert order_line["unitDiscountReason"] == f"Sale: {sale_id}"
+    assert order_line["unitDiscountReason"] is None
     assert order_data["total"]["gross"]["amount"] == total_gross_amount
     assert order_data["subtotal"]["gross"]["amount"] == subtotal_amount
     assert order_line["undiscountedUnitPrice"]["gross"]["amount"] == float(

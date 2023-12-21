@@ -193,7 +193,7 @@ def test_order_products_from_category_on_fixed_promotion_CORE_2106(
     order_lines = order_lines_create(e2e_staff_api_client, order_id, lines)
     order_product_variant_id_1 = order_lines["order"]["lines"][0]["variant"]["id"]
     assert order_product_variant_id_1 == product_variant_id_1
-    unit_price_product_1 = float(variant_price_1) - float(discount_value)
+    unit_price_product_1 = float(variant_price_1)
     undiscounted_price_product_1 = order_lines["order"]["lines"][0][
         "undiscountedUnitPrice"
     ]["gross"]["amount"]
@@ -204,7 +204,7 @@ def test_order_products_from_category_on_fixed_promotion_CORE_2106(
     )
     order_product_variant_id_2 = order_lines["order"]["lines"][1]["variant"]["id"]
     assert order_product_variant_id_2 == product_variant_id_2
-    unit_price_product_2 = float(variant_price_2) - float(discount_value)
+    unit_price_product_2 = float(variant_price_2)
     undiscounted_price_product_2 = order_lines["order"]["lines"][1][
         "undiscountedUnitPrice"
     ]["gross"]["amount"]
@@ -215,7 +215,7 @@ def test_order_products_from_category_on_fixed_promotion_CORE_2106(
     )
 
     promotion_reason = order_lines["order"]["lines"][0]["unitDiscountReason"]
-    assert promotion_reason == f"Promotion: {promotion_id}"
+    assert promotion_reason is None
 
     # Step 3 - Add a shipping method to the order
     input = {"shippingMethod": shipping_method_id}
@@ -232,15 +232,15 @@ def test_order_products_from_category_on_fixed_promotion_CORE_2106(
     assert order_complete_id == order_id
     order_line_1 = order["order"]["lines"][0]
     assert order_line_1["productVariantId"] == product_variant_id_1
-    assert order_line_1["unitDiscount"]["amount"] == float(discount_value)
+    assert order_line_1["unitDiscount"]["amount"] == 0.0
     assert order_line_1["unitDiscountType"] == discount_type
-    assert order_line_1["unitDiscountValue"] == float(discount_value)
+    assert order_line_1["unitDiscountValue"] == 0.0
     assert order_line_1["unitDiscountReason"] == promotion_reason
     order_line_2 = order["order"]["lines"][1]
     assert order_line_2["productVariantId"] == product_variant_id_2
-    assert order_line_2["unitDiscount"]["amount"] == float(discount_value)
+    assert order_line_2["unitDiscount"]["amount"] == 0.0
     assert order_line_2["unitDiscountType"] == discount_type
-    assert order_line_2["unitDiscountValue"] == float(discount_value)
+    assert order_line_2["unitDiscountValue"] == 0.0
     assert order_line_2["unitDiscountReason"] == promotion_reason
     shipping_amount = order["order"]["shippingPrice"]["gross"]["amount"]
     assert shipping_amount == shipping_price

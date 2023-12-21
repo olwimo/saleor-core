@@ -1,8 +1,8 @@
 import graphene
 
+from ....discount.utils import mark_products_for_recalculate_discounted_price
 from .....permission.enums import ProductPermissions
 from .....product import models
-from .....product.tasks import update_products_discounted_prices_for_promotion_task
 from ....channel import ChannelContext
 from ....core import ResolveInfo
 from ....core.doc_category import DOC_CATEGORY_PRODUCTS
@@ -50,9 +50,7 @@ class CollectionRemoveProducts(BaseMutation):
         for product in products:
             cls.call_event(manager.product_updated, product)
         # Updated the db entries, recalculating discounts of affected products
-        update_products_discounted_prices_for_promotion_task.delay(
-            [p.pk for p in products]
-        )
+        mark_products_for_recalculate_discounted_price([p.pk for p in products])
         return CollectionRemoveProducts(
             collection=ChannelContext(node=collection, channel_slug=None)
         )

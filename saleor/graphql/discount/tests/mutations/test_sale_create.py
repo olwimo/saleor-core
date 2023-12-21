@@ -10,7 +10,10 @@ from .....discount.error_codes import DiscountErrorCode
 from .....discount.models import Promotion, PromotionRule
 from ....tests.utils import get_graphql_content
 from ...enums import DiscountValueTypeEnum
-from ...utils import convert_migrated_sale_predicate_to_catalogue_info
+from ...utils import (
+    convert_migrated_sale_predicate_to_catalogue_info,
+    get_products_for_promotion,
+)
 
 SALE_CREATE_MUTATION = """
     mutation saleCreate($input: SaleInput!) {
@@ -40,13 +43,11 @@ SALE_CREATE_MUTATION = """
 
 
 @freeze_time("2020-03-18 12:00:00")
-@patch("saleor.product.tasks.update_products_discounted_prices_of_promotion_task.delay")
 @patch("saleor.plugins.manager.PluginsManager.sale_toggle")
 @patch("saleor.plugins.manager.PluginsManager.sale_created")
 def test_create_sale(
     created_webhook_mock,
     sale_toggle_mock,
-    update_products_discounted_prices_of_promotion_task_mock,
     staff_api_client,
     permission_manage_discounts,
     product_list,
@@ -100,19 +101,17 @@ def test_create_sale(
     )
     created_webhook_mock.assert_called_once_with(sale, current_catalogue)
     sale_toggle_mock.assert_called_once_with(sale, current_catalogue)
-    update_products_discounted_prices_of_promotion_task_mock.assert_called_once_with(
-        sale.id
-    )
+    for product in product_list:
+        product.refresh_from_db()
+        assert product.recalculate_discounted_price is True
 
 
 @freeze_time("2020-03-18 12:00:00")
-@patch("saleor.product.tasks.update_products_discounted_prices_of_promotion_task.delay")
 @patch("saleor.plugins.manager.PluginsManager.sale_toggle")
 @patch("saleor.plugins.manager.PluginsManager.sale_created")
 def test_create_sale_only_start_date(
     created_webhook_mock,
     sale_toggle_mock,
-    update_products_discounted_prices_of_promotion_task_mock,
     staff_api_client,
     permission_manage_discounts,
     product_list,
@@ -154,14 +153,12 @@ def test_create_sale_only_start_date(
     )
     created_webhook_mock.assert_called_once_with(sale, current_catalogue)
     sale_toggle_mock.assert_called_once_with(sale, current_catalogue)
-    update_products_discounted_prices_of_promotion_task_mock.assert_called_once_with(
-        sale.id
-    )
+    for product in product_list:
+        product.refresh_from_db()
+        assert product.recalculate_discounted_price is True
 
 
-@patch("saleor.product.tasks.update_products_discounted_prices_of_promotion_task.delay")
 def test_create_sale_with_end_date_before_startdate(
-    update_products_discounted_prices_of_promotion_task_mock,
     staff_api_client,
     permission_manage_discounts,
 ):
@@ -190,16 +187,13 @@ def test_create_sale_with_end_date_before_startdate(
     assert len(errors) == 1
     assert errors[0]["field"] == "endDate"
     assert errors[0]["code"] == DiscountErrorCode.INVALID.name
-    update_products_discounted_prices_of_promotion_task_mock.assert_not_called()
 
 
-@patch("saleor.product.tasks.update_products_discounted_prices_of_promotion_task.delay")
 @patch("saleor.plugins.manager.PluginsManager.sale_toggle")
 @patch("saleor.plugins.manager.PluginsManager.sale_created")
 def test_create_sale_start_date_and_end_date_before_current_date(
     created_webhook_mock,
     sale_toggle_mock,
-    update_products_discounted_prices_of_promotion_task_mock,
     staff_api_client,
     permission_manage_discounts,
     product_list,
@@ -243,18 +237,13 @@ def test_create_sale_start_date_and_end_date_before_current_date(
     )
     created_webhook_mock.assert_called_once_with(sale, current_catalogue)
     sale_toggle_mock.assert_not_called()
-    update_products_discounted_prices_of_promotion_task_mock.assert_called_once_with(
-        sale.id
-    )
 
 
-@patch("saleor.product.tasks.update_products_discounted_prices_of_promotion_task.delay")
 @patch("saleor.plugins.manager.PluginsManager.sale_toggle")
 @patch("saleor.plugins.manager.PluginsManager.sale_created")
 def test_create_sale_start_date_and_end_date_after_current_date(
     created_webhook_mock,
     sale_toggle_mock,
-    update_products_discounted_prices_of_promotion_task_mock,
     staff_api_client,
     permission_manage_discounts,
     product_list,
@@ -285,6 +274,7 @@ def test_create_sale_start_date_and_end_date_after_current_date(
     content = get_graphql_content(response)
     data = content["data"]["saleCreate"]["sale"]
     sale = Promotion.objects.filter(name="test sale").get()
+    products = get_products_for_promotion(sale)
     rule = PromotionRule.objects.filter(promotion_id=sale.id).get()
 
     assert data["type"] == DiscountValueType.FIXED.upper()
@@ -298,9 +288,9 @@ def test_create_sale_start_date_and_end_date_after_current_date(
     )
     created_webhook_mock.assert_called_once_with(sale, current_catalogue)
     sale_toggle_mock.assert_not_called()
-    update_products_discounted_prices_of_promotion_task_mock.assert_called_once_with(
-        sale.id
-    )
+    for product in products:
+        product.refresh_from_db()
+        assert product.recalculate_discounted_price is True
 
 
 @freeze_time("2020-03-18 12:00:00")

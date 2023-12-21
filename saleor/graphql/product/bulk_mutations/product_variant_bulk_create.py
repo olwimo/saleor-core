@@ -7,12 +7,12 @@ from django.core.exceptions import ValidationError
 from django.db.models import F
 from graphene.utils.str_converters import to_camel_case
 
+from ...discount.utils import mark_products_for_recalculate_discounted_price
 from ....attribute import AttributeType
 from ....core.tracing import traced_atomic_transaction
 from ....permission.enums import ProductPermissions
 from ....product import models
 from ....product.error_codes import ProductVariantBulkErrorCode
-from ....product.tasks import update_products_discounted_prices_for_promotion_task
 from ....warehouse import models as warehouse_models
 from ....webhook.event_types import WebhookEventAsyncType
 from ....webhook.utils import get_webhooks_for_event
@@ -918,7 +918,7 @@ class ProductVariantBulkCreate(BaseMutation):
     @classmethod
     def post_save_actions(cls, info, instances, product):
         # Recalculate the "discounted price" for the parent product
-        update_products_discounted_prices_for_promotion_task.delay([product.pk])
+        mark_products_for_recalculate_discounted_price([product.pk])
         product.search_index_dirty = True
         product.save(update_fields=["search_index_dirty"])
 

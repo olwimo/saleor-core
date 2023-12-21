@@ -38,11 +38,7 @@ MUTATION_CATEGORY_BULK_DELETE = """
 """
 
 
-@patch(
-    "saleor.product.tasks.update_products_discounted_prices_for_promotion_task.delay"
-)
 def test_delete_categories(
-    update_products_discounted_price_task_mock,
     staff_api_client,
     category_list,
     product_list,
@@ -75,9 +71,10 @@ def test_delete_categories(
     assert not Category.objects.filter(
         id__in=[category.id for category in category_list]
     ).exists()
-    update_products_discounted_price_task_mock.assert_called_once()
-    args, kwargs = update_products_discounted_price_task_mock.call_args
-    assert set(kwargs["product_ids"]) == {product.id for product in product_list}
+
+    for product in product_list:
+        product.refresh_from_db()
+        assert product.recalculate_discounted_price is True
 
 
 @patch("saleor.product.utils.get_webhooks_for_event")
@@ -204,9 +201,7 @@ def test_delete_categories_trigger_product_updated_webhook(
     assert product_updated_mock.call_count == 2
 
 
-@patch("saleor.product.utils.update_products_discounted_prices_for_promotion_task")
 def test_delete_categories_with_subcategories_and_products(
-    mock_update_products_discounted_prices_for_promotion_task,
     staff_api_client,
     category_list,
     permission_manage_products,
@@ -259,16 +254,9 @@ def test_delete_categories_with_subcategories_and_products(
         id__in=[category.id for category in category_list]
     ).exists()
 
-    mock_update_products_discounted_prices_for_promotion_task.delay.assert_called_once()
-    (
-        _call_args,
-        call_kwargs,
-    ) = mock_update_products_discounted_prices_for_promotion_task.delay.call_args
-
-    assert set(call_kwargs["product_ids"]) == set([p.pk for p in product_list])
-
     for product in product_list:
         product.refresh_from_db()
+        assert product.recalculate_discounted_price is True
         assert not product.category
 
     product_channel_listings = ProductChannelListing.objects.filter(
@@ -289,11 +277,7 @@ MUTATION_COLLECTION_BULK_DELETE = """
 """
 
 
-@patch(
-    "saleor.product.tasks.update_products_discounted_prices_for_promotion_task.delay"
-)
 def test_delete_collections(
-    update_products_discounted_price_task_mock,
     staff_api_client,
     collection_list,
     product_list,
@@ -324,9 +308,10 @@ def test_delete_collections(
     assert not Collection.objects.filter(
         id__in=[collection.id for collection in collection_list]
     ).exists()
-    update_products_discounted_price_task_mock.assert_called_once()
-    args = set(update_products_discounted_price_task_mock.call_args.args[0])
-    assert args == {product.id for product in product_list}
+
+    for product in product_list:
+        product.refresh_from_db()
+        assert product.recalculate_discounted_price is True
 
 
 def test_delete_collections_with_images(
@@ -991,15 +976,11 @@ def test_delete_product_variants_by_sku(
     "saleor.graphql.product.bulk_mutations."
     "product_variant_bulk_delete.get_webhooks_for_event"
 )
-@patch(
-    "saleor.product.tasks.update_products_discounted_prices_for_promotion_task.delay"
-)
 @patch("saleor.plugins.manager.PluginsManager.product_variant_deleted")
 @patch("saleor.order.tasks.recalculate_orders_task.delay")
 def test_delete_product_variants_by_sku_task_for_recalculate_product_prices_called(
     mocked_recalculate_orders_task,
     product_variant_deleted_webhook_mock,
-    update_products_discounted_price_task_mock,
     mocked_get_webhooks_for_event,
     staff_api_client,
     product_list,
@@ -1036,9 +1017,10 @@ def test_delete_product_variants_by_sku_task_for_recalculate_product_prices_call
         == content["data"]["productVariantBulkDelete"]["count"]
     )
     mocked_recalculate_orders_task.assert_not_called()
-    update_products_discounted_price_task_mock.assert_called_once()
-    args = set(update_products_discounted_price_task_mock.call_args.args[0])
-    assert args == {product.id for product in product_list}
+
+    for product in product_list:
+        product.refresh_from_db()
+        assert product.recalculate_discounted_price is True
 
 
 PRODUCT_VARIANT_BULK_DELETE_MUTATION = """
@@ -1112,15 +1094,11 @@ def test_delete_product_variants(
     "saleor.graphql.product.bulk_mutations."
     "product_variant_bulk_delete.get_webhooks_for_event"
 )
-@patch(
-    "saleor.product.tasks.update_products_discounted_prices_for_promotion_task.delay"
-)
 @patch("saleor.plugins.manager.PluginsManager.product_variant_deleted")
 @patch("saleor.order.tasks.recalculate_orders_task.delay")
 def test_delete_product_variants_task_for_recalculate_product_prices_called(
     mocked_recalculate_orders_task,
     product_variant_deleted_webhook_mock,
-    update_products_discounted_price_task_mock,
     mocked_get_webhooks_for_event,
     staff_api_client,
     product_list,
@@ -1159,16 +1137,13 @@ def test_delete_product_variants_task_for_recalculate_product_prices_called(
         == content["data"]["productVariantBulkDelete"]["count"]
     )
     mocked_recalculate_orders_task.assert_not_called()
-    update_products_discounted_price_task_mock.assert_called_once()
-    args = set(update_products_discounted_price_task_mock.call_args.args[0])
-    assert args == {product.id for product in product_list}
+
+    for product in product_list:
+        product.refresh_from_db()
+        assert product.recalculate_discounted_price is True
 
 
-@patch(
-    "saleor.product.tasks.update_products_discounted_prices_for_promotion_task.delay"
-)
 def test_delete_product_variants_invalid_object_typed_of_given_ids(
-    update_products_discounted_price_task_mock,
     staff_api_client,
     product_variant_list,
     permission_manage_products,
@@ -1191,7 +1166,9 @@ def test_delete_product_variants_invalid_object_typed_of_given_ids(
     assert errors[0]["code"] == ProductErrorCode.GRAPHQL_ERROR.name
     assert errors[0]["field"] == "ids"
     assert data["count"] == 0
-    update_products_discounted_price_task_mock.assert_not_called()
+
+    for product_variant in product_variant_list:
+        assert product_variant.product.recalculate_discounted_price is False
 
 
 def test_delete_product_variants_removes_checkout_lines(

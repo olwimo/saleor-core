@@ -1,11 +1,11 @@
 import graphene
 from django.core.exceptions import ValidationError
 
+from ....discount.utils import mark_products_for_recalculate_discounted_price
 from .....core.tracing import traced_atomic_transaction
 from .....permission.enums import ProductPermissions
 from .....product import models
 from .....product.error_codes import CollectionErrorCode
-from .....product.tasks import update_products_discounted_prices_for_promotion_task
 from .....product.utils import get_products_ids_without_variants
 from ....channel import ChannelContext
 from ....core import ResolveInfo
@@ -54,9 +54,7 @@ class CollectionAddProducts(BaseMutation):
         with traced_atomic_transaction():
             collection.products.add(*products)
             # Updated the db entries, recalculating discounts of affected products
-            update_products_discounted_prices_for_promotion_task.delay(
-                [pq.pk for pq in products]
-            )
+            mark_products_for_recalculate_discounted_price([pq.pk for pq in products])
             for product in products:
                 cls.call_event(manager.product_updated, product)
 

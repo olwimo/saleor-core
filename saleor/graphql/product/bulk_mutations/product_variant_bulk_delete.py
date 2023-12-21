@@ -6,6 +6,7 @@ from django.db.models import Exists, OuterRef, Subquery
 from django.db.models.fields import IntegerField
 from django.db.models.functions import Coalesce
 
+from ...discount.utils import mark_products_for_recalculate_discounted_price
 from ....attribute import AttributeInputType
 from ....attribute import models as attribute_models
 from ....core.postgres import FlatConcatSearchVector
@@ -16,7 +17,6 @@ from ....order.tasks import recalculate_orders_task
 from ....permission.enums import ProductPermissions
 from ....product import models
 from ....product.search import prepare_product_search_vector_value
-from ....product.tasks import update_products_discounted_prices_for_promotion_task
 from ....webhook.event_types import WebhookEventAsyncType
 from ....webhook.utils import get_webhooks_for_event
 from ...app.dataloaders import get_app_promise
@@ -126,7 +126,7 @@ class ProductVariantBulkDelete(ModelBulkDeleteMutation):
             )
 
         # Recalculate the "discounted price" for the related products
-        update_products_discounted_prices_for_promotion_task.delay(product_pks)
+        mark_products_for_recalculate_discounted_price(product_pks)
 
         return response
 

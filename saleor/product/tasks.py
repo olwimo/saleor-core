@@ -137,12 +137,26 @@ def update_products_discounted_prices_for_promotion_task(
 @app.task
 def update_discounted_prices_task(product_ids: Iterable[int]):
     """Update the product discounted prices for given product ids."""
-    ids = sorted(product_ids)[:DISCOUNTED_PRODUCT_BATCH]
-    qs = Product.objects.filter(pk__in=ids)
+    ids = set(sorted(product_ids)[:DISCOUNTED_PRODUCT_BATCH])
+    products = Product.objects.filter(pk__in=ids)
     if ids:
-        update_discounted_prices_for_promotion(qs)
+        update_discounted_prices_for_promotion(products)
         remaining_ids = list(set(product_ids) - set(ids))
         update_discounted_prices_task.delay(remaining_ids)
+
+
+@app.task
+def recalculate_discounted_price_for_products_task():
+    """Recalculate discounted price for products"""
+    products_ids = list(
+        Product.objects.filter(recalculate_discounted_price=True)
+        .order_by("id")
+        .values_list("id", flat=True)
+    )[:DISCOUNTED_PRODUCT_BATCH]
+    if products := Product.objects.filter(id__in=products_ids):
+        update_discounted_prices_for_promotion(products)
+        products.update(recalculate_discounted_price=False)
+        recalculate_discounted_price_for_products_task.delay()
 
 
 @app.task

@@ -7,15 +7,18 @@ from django.db.models import Exists, OuterRef
 
 from .....discount.error_codes import DiscountErrorCode
 from .....product import models as product_models
-from .....product.tasks import update_discounted_prices_task
 from .....product.utils import get_products_ids_without_variants
 from ....core import ResolveInfo
 from ....core.mutations import BaseMutation
 from ....plugins.dataloaders import get_plugin_manager_promise
 from ....product.types import Category, Collection, Product, ProductVariant
 from ...types import Sale
-from ...utils import convert_catalogue_info_into_predicate, get_variants_for_predicate
+from ...utils import get_variants_for_predicate
 from ..utils import update_variants_for_promotion
+from ...utils import (
+    convert_catalogue_info_into_predicate,
+    mark_products_for_recalculate_discounted_price,
+)
 from ..voucher.voucher_add_catalogues import CatalogueInput
 
 CatalogueInfo = defaultdict[str, set[Union[int, str]]]
@@ -66,7 +69,7 @@ class SaleBaseCatalogueMutation(BaseMutation):
                 product_ids = new_product_ids - previous_product_ids
             else:
                 product_ids = previous_product_ids - new_product_ids
-            update_discounted_prices_task.delay(list(product_ids))
+            mark_products_for_recalculate_discounted_price(list(product_ids))
 
     @classmethod
     def get_product_ids_for_predicate(cls, predicate: dict) -> set[int]:

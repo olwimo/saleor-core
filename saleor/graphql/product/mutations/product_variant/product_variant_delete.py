@@ -4,6 +4,7 @@ import graphene
 from django.core.exceptions import ValidationError
 from django.db.models import Exists, OuterRef
 
+from ....discount.utils import mark_products_for_recalculate_discounted_price
 from .....attribute import AttributeInputType
 from .....attribute import models as attribute_models
 from .....core.tracing import traced_atomic_transaction
@@ -12,7 +13,6 @@ from .....order import models as order_models
 from .....order.tasks import recalculate_orders_task
 from .....permission.enums import ProductPermissions
 from .....product import models
-from .....product.tasks import update_products_discounted_prices_for_promotion_task
 from ....app.dataloaders import get_app_promise
 from ....channel import ChannelContext
 from ....core import ResolveInfo
@@ -51,9 +51,7 @@ class ProductVariantDelete(ModelDeleteMutation, ModelWithExtRefMutation):
     @classmethod
     def success_response(cls, instance):
         # Update the "discounted_prices" of the parent product
-        update_products_discounted_prices_for_promotion_task.delay(
-            [instance.product_id]
-        )
+        mark_products_for_recalculate_discounted_price([instance.product_id])
         product = models.Product.objects.get(id=instance.product_id)
         product.search_index_dirty = True
         product.save(update_fields=["search_index_dirty"])

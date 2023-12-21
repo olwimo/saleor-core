@@ -5,13 +5,13 @@ import graphene
 from django.core.exceptions import ValidationError
 from django.db.models import Exists, OuterRef
 
+from ...utils import mark_products_of_promotion_for_recalculate_discounted_price
 from .....channel.models import Channel
 from .....core.tracing import traced_atomic_transaction
 from .....discount import DiscountValueType
 from .....discount.error_codes import DiscountErrorCode
 from .....discount.models import Promotion, PromotionRule
 from .....permission.enums import DiscountPermissions
-from .....product.tasks import update_products_discounted_prices_of_promotion_task
 from ....channel import ChannelContext
 from ....channel.mutations import BaseChannelListingMutation
 from ....core import ResolveInfo
@@ -223,7 +223,7 @@ class SaleChannelListingUpdate(BaseChannelListingMutation):
         with traced_atomic_transaction():
             cls.add_channels(promotion, rule, cleaned_input.get("add_channels", []))
             cls.remove_channels(promotion, cleaned_input.get("remove_channels", []))
-            update_products_discounted_prices_of_promotion_task.delay(promotion.pk)
+            mark_products_of_promotion_for_recalculate_discounted_price(promotion.pk)
 
     @classmethod
     def get_instance(cls, id):

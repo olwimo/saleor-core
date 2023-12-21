@@ -9,7 +9,10 @@ from django.conf import settings
 from django.db.models import Exists, F, OuterRef, Q, QuerySet
 
 from ..celeryconf import app
-from ..graphql.discount.utils import get_variants_for_predicate
+from ..graphql.discount.utils import (
+    get_variants_for_predicate,
+    mark_products_for_recalculate_discounted_price,
+)
 from ..order import OrderStatus
 from ..order.models import Order, OrderLine
 from ..plugins.manager import get_plugins_manager
@@ -19,7 +22,6 @@ from ..product.models import (
     ProductVariantChannelListing,
     VariantChannelListingPromotionRule,
 )
-from ..product.tasks import update_products_discounted_prices_for_promotion_task
 from ..product.utils.variant_prices import update_discounted_prices_for_promotion
 from ..webhook.event_types import WebhookEventAsyncType
 from ..webhook.utils import get_webhooks_for_event
@@ -95,16 +97,9 @@ def handle_promotion_toggle():
     if ending_promotions:
         clear_promotion_rule_variants_task.delay()
 
-    rule_ids = list(
-        PromotionRule.objects.filter(
-            Exists(promotions.filter(id=OuterRef("promotion_id")))
-        ).values_list("pk", flat=True)
-    )
     if product_ids:
         # Recalculate discounts of affected products
-        update_products_discounted_prices_for_promotion_task.delay(
-            product_ids, rule_ids=rule_ids
-        )
+        mark_products_for_recalculate_discounted_price(product_ids)
 
     starting_promotion_ids = ", ".join(
         [str(staring_promo.id) for staring_promo in starting_promotions]

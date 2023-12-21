@@ -1091,13 +1091,9 @@ DELETE_COLLECTION_MUTATION = """
 """
 
 
-@patch(
-    "saleor.product.tasks.update_products_discounted_prices_for_promotion_task.delay"
-)
 @patch("saleor.plugins.manager.PluginsManager.collection_deleted")
 def test_delete_collection(
     deleted_webhook_mock,
-    update_products_discounted_prices_for_promotion_task_mock,
     staff_api_client,
     collection,
     product_list,
@@ -1122,11 +1118,10 @@ def test_delete_collection(
         collection.refresh_from_db()
 
     deleted_webhook_mock.assert_called_once()
-    update_products_discounted_prices_for_promotion_task_mock.assert_called_once()
-    args = set(
-        update_products_discounted_prices_for_promotion_task_mock.call_args.args[0]
-    )
-    assert args == {product.id for product in product_list}
+
+    for product in product_list:
+        product.refresh_from_db()
+        assert product.recalculate_discounted_price is True
 
 
 @patch("saleor.core.tasks.delete_from_storage_task.delay")
@@ -1206,11 +1201,7 @@ COLLECTION_ADD_PRODUCTS_MUTATION = """
 """
 
 
-@patch(
-    "saleor.product.tasks.update_products_discounted_prices_for_promotion_task.delay"
-)
 def test_add_products_to_collection(
-    update_products_discounted_prices_for_promotion_task_mock,
     staff_api_client,
     collection,
     product_list,
@@ -1233,11 +1224,10 @@ def test_add_products_to_collection(
     content = get_graphql_content(response)
     data = content["data"]["collectionAddProducts"]["collection"]
     assert data["products"]["totalCount"] == products_before + len(product_ids)
-    update_products_discounted_prices_for_promotion_task_mock.assert_called_once()
-    args = set(
-        update_products_discounted_prices_for_promotion_task_mock.call_args.args[0]
-    )
-    assert args == {product.id for product in product_list}
+
+    for product in product_list:
+        product.refresh_from_db()
+        assert product.recalculate_discounted_price is True
 
 
 @patch("saleor.plugins.manager.PluginsManager.product_updated")
@@ -1312,11 +1302,7 @@ COLLECTION_REMOVE_PRODUCTS_MUTATION = """
 """
 
 
-@patch(
-    "saleor.product.tasks.update_products_discounted_prices_for_promotion_task.delay"
-)
 def test_remove_products_from_collection(
-    update_products_discounted_prices_for_promotion_task_mock,
     staff_api_client,
     collection,
     product_list,
@@ -1339,11 +1325,10 @@ def test_remove_products_from_collection(
     content = get_graphql_content(response)
     data = content["data"]["collectionRemoveProducts"]["collection"]
     assert data["products"]["totalCount"] == products_before - len(product_ids)
-    update_products_discounted_prices_for_promotion_task_mock.assert_called_once()
-    args = set(
-        update_products_discounted_prices_for_promotion_task_mock.call_args.args[0]
-    )
-    assert args == {product.id for product in product_list}
+
+    for product in product_list:
+        product.refresh_from_db()
+        assert product.recalculate_discounted_price is True
 
 
 @patch("saleor.plugins.manager.PluginsManager.product_updated")

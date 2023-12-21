@@ -4,6 +4,8 @@ import graphene
 import pytest
 
 from ....tests.utils import assert_no_permission, get_graphql_content
+from .....graphql.discount.utils import get_products_for_promotion
+
 
 PROMOTION_DELETE_MUTATION = """
     mutation promotionDelete($id: ID!) {
@@ -22,16 +24,15 @@ PROMOTION_DELETE_MUTATION = """
 """
 
 
-@patch("saleor.product.tasks.update_discounted_prices_task.delay")
 @patch("saleor.plugins.manager.PluginsManager.promotion_deleted")
 def test_promotion_delete_by_staff_user(
     promotion_deleted_mock,
-    update_discounted_prices_task_mock,
     staff_api_client,
     permission_group_manage_discounts,
     promotion,
 ):
     # given
+    products = get_products_for_promotion(promotion)
     permission_group_manage_discounts.user_set.add(staff_api_client.user)
     variables = {"id": graphene.Node.to_global_id("Promotion", promotion.id)}
 
@@ -48,19 +49,20 @@ def test_promotion_delete_by_staff_user(
     with pytest.raises(promotion._meta.model.DoesNotExist):
         promotion.refresh_from_db()
 
-    update_discounted_prices_task_mock.assert_called_once()
+    for product in products:
+        product.refresh_from_db()
+        assert product.recalculate_discounted_price is True
 
 
-@patch("saleor.product.tasks.update_discounted_prices_task.delay")
 @patch("saleor.plugins.manager.PluginsManager.promotion_deleted")
 def test_promotion_delete_by_staff_app(
     promotion_deleted_mock,
-    update_discounted_prices_task_mock,
     app_api_client,
     permission_manage_discounts,
     promotion,
 ):
     # given
+    products = get_products_for_promotion(promotion)
     variables = {"id": graphene.Node.to_global_id("Promotion", promotion.id)}
 
     # when
@@ -77,7 +79,10 @@ def test_promotion_delete_by_staff_app(
 
     with pytest.raises(promotion._meta.model.DoesNotExist):
         promotion.refresh_from_db()
-    update_discounted_prices_task_mock.assert_called_once()
+
+    for product in products:
+        product.refresh_from_db()
+        assert product.recalculate_discounted_price is True
 
 
 @patch("saleor.product.tasks.update_discounted_prices_task.delay")

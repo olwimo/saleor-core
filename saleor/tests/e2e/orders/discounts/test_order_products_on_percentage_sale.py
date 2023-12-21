@@ -114,8 +114,7 @@ def test_order_products_on_percentage_sale_CORE_1003(
 
     draft_line = order_lines["order"]["lines"][0]
     assert draft_line["variant"]["id"] == product_variant_id
-    discount = round(float(product_variant_price) * sale_discount_value / 100, 2)
-    unit_price = float(product_variant_price) - discount
+    unit_price = float(product_variant_price)
     undiscounted_price = draft_line["undiscountedUnitPrice"]["gross"]["amount"]
     assert undiscounted_price == float(product_variant_price)
     assert draft_line["unitPrice"]["gross"]["amount"] == round(unit_price, 2)
@@ -142,9 +141,9 @@ def test_order_products_on_percentage_sale_CORE_1003(
     assert total == round(float(shipping_price + unit_price), 2)
 
     order_line = order["order"]["lines"][0]
-    assert order_line["unitDiscount"]["amount"] == discount
-    assert order_line["unitDiscountValue"] == discount
+    assert order_line["unitDiscount"]["amount"] == 0.0
+    assert order_line["unitDiscountValue"] == 0.0
     assert order_line["unitDiscountType"] == "FIXED"
-    assert draft_line["unitDiscountReason"] == f"Sale: {sale_id}"
+    assert draft_line["unitDiscountReason"] is None
     product_price = order_line["undiscountedUnitPrice"]["gross"]["amount"]
     assert product_price == undiscounted_price

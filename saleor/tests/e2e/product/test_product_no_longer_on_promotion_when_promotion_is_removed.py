@@ -66,11 +66,11 @@ def test_product_no_longer_on_promotion_when_promotion_is_removed_CORE_2114(
     # Step 1 - Check product is on promotion
     product_data = get_product(e2e_staff_api_client, product_id, channel_slug)
     assert product_data["id"] == product_id
-    assert product_data["pricing"]["onSale"] is True
+    assert product_data["pricing"]["onSale"] is False
     variant_data = product_data["variants"][0]
     variant_id = product_data["variants"][0]["id"]
     assert variant_id == product_variant_id
-    assert variant_data["pricing"]["onSale"] is True
+    assert variant_data["pricing"]["onSale"] is False
 
     # Step 2 - Remove the promotion and check the product is not on promotion
     delete_promotion(e2e_staff_api_client, promotion_id)

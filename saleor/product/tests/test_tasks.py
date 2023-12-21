@@ -18,6 +18,7 @@ from ..tasks import (
     update_products_discounted_prices_of_promotion_task,
     update_products_search_vector_task,
     update_variants_names,
+    recalculate_discounted_price_for_products_task,
 )
 
 
@@ -215,3 +216,27 @@ def test_mem_usage_update_products_discounted_prices(lots_of_products_with_varia
     update_products_discounted_prices_for_promotion_task(
         lots_of_products_with_variants.values_list("pk", flat=True)
     )
+
+
+@patch("saleor.product.tasks.update_discounted_prices_for_promotion")
+@patch("saleor.product.tasks.recalculate_discounted_price_for_products_task.delay")
+def test_recalculate_discounted_price_for_products_task(
+    mocked_recalculate_price_for_products_delay,
+    mocked_update_discounted_prices_for_promotion,
+    product,
+):
+    # given
+    mocked_recalculate_price_for_products_delay.return_value = (
+        recalculate_discounted_price_for_products_task
+    )
+    product.recalculate_discounted_price = True
+    product.save()
+
+    # when
+    recalculate_discounted_price_for_products_task()
+
+    # then
+    product.refresh_from_db()
+    assert product.recalculate_discounted_price is False
+    mocked_recalculate_price_for_products_delay.assert_called_once()
+    mocked_update_discounted_prices_for_promotion.assert_called_once()

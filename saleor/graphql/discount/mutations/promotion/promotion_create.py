@@ -7,11 +7,11 @@ from django.core.exceptions import ValidationError
 from django.db import transaction
 from graphql.error import GraphQLError
 
+from ...utils import mark_products_of_promotion_for_recalculate_discounted_price
 from .....channel import models as channel_models
 from .....discount import events, models
 from .....permission.enums import DiscountPermissions
 from .....plugins.manager import PluginsManager
-from .....product.tasks import update_products_discounted_prices_of_promotion_task
 from .....webhook.event_types import WebhookEventAsyncType
 from ....app.dataloaders import get_app_promise
 from ....channel.types import Channel
@@ -199,7 +199,7 @@ class PromotionCreate(ModelMutation):
         cls.call_event(manager.promotion_created, instance)
         if has_started:
             cls.send_promotion_started_webhook(manager, instance)
-        update_products_discounted_prices_of_promotion_task.delay(instance.pk)
+        mark_products_of_promotion_for_recalculate_discounted_price(instance.pk)
 
     @classmethod
     def has_started(cls, instance: models.Promotion) -> bool:

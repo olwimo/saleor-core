@@ -19,6 +19,7 @@ from ..tasks import (
     handle_promotion_toggle,
     set_promotion_rule_variants_task,
 )
+from ...product.models import Product
 
 
 def test_fetch_promotion_variants_and_product_ids(
@@ -57,10 +58,6 @@ def test_fetch_promotion_variants_and_product_ids(
 
 
 @freeze_time("2020-03-18 12:00:00")
-@patch("saleor.discount.tasks.clear_promotion_rule_variants_task.delay")
-@patch(
-    "saleor.product.tasks.update_products_discounted_prices_for_promotion_task.delay"
-)
 @patch("saleor.plugins.manager.PluginsManager.sale_toggle")
 @patch("saleor.plugins.manager.PluginsManager.promotion_ended")
 @patch("saleor.plugins.manager.PluginsManager.promotion_started")
@@ -68,8 +65,6 @@ def test_handle_promotion_toggle(
     promotion_started_mock,
     promotion_ended_mock,
     sale_toggle_mock,
-    mock_update_products_discounted_prices_for_promotion_task,
-    mock_clear_promotion_rule_variants_task,
     product_list,
 ):
     # given
@@ -182,20 +177,7 @@ def test_handle_promotion_toggle(
         promotions[index].refresh_from_db()
         assert promotions[index].last_notification_scheduled_at == now
 
-    mock_update_products_discounted_prices_for_promotion_task.assert_called_once()
-    args, kwargs = mock_update_products_discounted_prices_for_promotion_task.call_args
-    # get ids of instances assigned to promotions that toggle
-    assert {product_id for product_id in args[0]} == {
-        product_list[0].id,
-        product_list[2].id,
-    }
-
-    assert {rule_id for rule_id in kwargs["rule_ids"]} == {
-        rules[0].id,
-        rules[2].id,
-    }
-
-    mock_clear_promotion_rule_variants_task.assert_called_once()
+    assert Product.objects.filter(recalculate_discounted_price=True).count() == 2
 
 
 def test_clear_promotion_rule_variants_task(promotion_list):

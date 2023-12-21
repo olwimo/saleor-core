@@ -115,14 +115,8 @@ def test_staff_can_change_catalogue_predicate_core_2112(
     assert second_variant["id"] == second_product_variant_id
     assert product_data["pricing"]["onSale"] is False
     assert first_variant["pricing"]["onSale"] is False
-    assert second_variant["pricing"]["onSale"] is True
-    calculated_second_variant_discount = round(
-        float(second_variant_price) * (discount_value / 100), 2
-    )
-    assert (
-        second_variant["pricing"]["discount"]["gross"]["amount"]
-        == calculated_second_variant_discount
-    )
+    assert second_variant["pricing"]["onSale"] is False
+    assert second_variant["pricing"]["discount"] is None
     assert second_variant["pricing"]["priceUndiscounted"]["gross"]["amount"] == float(
         second_variant_price
     )

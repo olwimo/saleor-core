@@ -103,13 +103,9 @@ PRODUCT_VARIANT_BULK_CREATE_MUTATION = """
     "saleor.graphql.product.bulk_mutations."
     "product_variant_bulk_create.get_webhooks_for_event"
 )
-@patch(
-    "saleor.product.tasks.update_products_discounted_prices_for_promotion_task.delay"
-)
 @patch("saleor.plugins.manager.PluginsManager.product_variant_created")
 def test_product_variant_bulk_create_by_name(
     product_variant_created_webhook_mock,
-    update_products_discounted_prices_for_promotion_task_mock,
     mocked_get_webhooks_for_event,
     staff_api_client,
     product,
@@ -175,22 +171,16 @@ def test_product_variant_bulk_create_by_name(
     product.refresh_from_db()
     assert product.default_variant == product_variant
     assert product_variant_created_webhook_mock.call_count == data["count"]
-    update_products_discounted_prices_for_promotion_task_mock.assert_called_once_with(
-        [product.id]
-    )
+    assert product.recalculate_discounted_price is True
 
 
 @patch(
     "saleor.graphql.product.bulk_mutations."
     "product_variant_bulk_create.get_webhooks_for_event"
 )
-@patch(
-    "saleor.product.tasks.update_products_discounted_prices_for_promotion_task.delay"
-)
 @patch("saleor.plugins.manager.PluginsManager.product_variant_created")
 def test_product_variant_bulk_create_by_attribute_id(
     product_variant_created_webhook_mock,
-    update_products_discounted_prices_for_promotion_task_mock,
     mocked_get_webhooks_for_event,
     staff_api_client,
     product,
@@ -239,9 +229,7 @@ def test_product_variant_bulk_create_by_attribute_id(
     product.refresh_from_db()
     assert product.default_variant == product_variant
     assert product_variant_created_webhook_mock.call_count == data["count"]
-    update_products_discounted_prices_for_promotion_task_mock.assert_called_once_with(
-        [product.id]
-    )
+    assert product.recalculate_discounted_price is True
 
 
 def test_product_variant_bulk_create_by_attribute_external_ref(

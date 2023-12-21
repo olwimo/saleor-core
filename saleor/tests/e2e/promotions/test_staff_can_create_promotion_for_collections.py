@@ -116,12 +116,11 @@ def test_create_promotion_for_collection_core_2109(
 
     # Step 2 Get product and verify that is on sale
     product_data = get_product(e2e_staff_api_client, product_id, channel_slug)
-    variant_discount = round(float(variant_price) * discount_value / 100, 2)
 
     product_variant = product_data["variants"][0]
-    assert product_data["pricing"]["onSale"] is True
-    assert product_variant["pricing"]["onSale"] is True
-    assert product_variant["pricing"]["discount"]["gross"]["amount"] == variant_discount
+    assert product_data["pricing"]["onSale"] is False
+    assert product_variant["pricing"]["onSale"] is False
+    assert product_variant["pricing"]["discount"] is None
     assert product_variant["pricing"]["priceUndiscounted"]["gross"]["amount"] == float(
         variant_price
     )

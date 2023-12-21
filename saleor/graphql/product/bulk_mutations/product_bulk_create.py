@@ -10,6 +10,7 @@ from django.utils.text import slugify
 from graphene.utils.str_converters import to_camel_case
 from text_unidecode import unidecode
 
+from ...discount.utils import mark_products_for_recalculate_discounted_price
 from ....core.http_client import HTTPClient
 from ....core.tracing import traced_atomic_transaction
 from ....core.utils import prepare_unique_slug
@@ -18,7 +19,6 @@ from ....core.utils.validators import get_oembed_data
 from ....permission.enums import ProductPermissions
 from ....product import ProductMediaTypes, models
 from ....product.error_codes import ProductBulkCreateErrorCode
-from ....product.tasks import update_products_discounted_prices_for_promotion_task
 from ....thumbnail.utils import get_filename_from_url
 from ....warehouse.models import Warehouse
 from ....webhook.event_types import WebhookEventAsyncType
@@ -852,7 +852,7 @@ class ProductBulkCreate(BaseMutation):
         for channel in channels:
             cls.call_event(manager.channel_updated, channel, webhooks=webhooks)
 
-        update_products_discounted_prices_for_promotion_task.delay(product_ids)
+        mark_products_for_recalculate_discounted_price(product_ids)
 
     @classmethod
     @traced_atomic_transaction()

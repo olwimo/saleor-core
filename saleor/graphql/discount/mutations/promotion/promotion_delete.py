@@ -5,13 +5,13 @@ from .....discount import models
 from .....discount.utils import get_current_products_for_rules
 from .....graphql.core.mutations import ModelDeleteMutation
 from .....permission.enums import DiscountPermissions
-from .....product.tasks import update_discounted_prices_task
 from .....webhook.event_types import WebhookEventAsyncType
 from ....core import ResolveInfo
 from ....core.descriptions import ADDED_IN_317, PREVIEW_FEATURE
 from ....core.doc_category import DOC_CATEGORY_DISCOUNTS
 from ....core.types import Error
 from ....core.utils import WebhookEventInfo
+from ....discount.utils import mark_products_for_recalculate_discounted_price
 from ....plugins.dataloaders import get_plugin_manager_promise
 from ...enums import PromotionDeleteErrorCode
 from ...types import Promotion
@@ -58,5 +58,5 @@ class PromotionDelete(ModelDeleteMutation):
             response = super().perform_mutation(root, info, id=id)
             instance.id = promotion_id
             cls.call_event(manager.promotion_deleted, instance)
-            update_discounted_prices_task.delay(product_ids)
+            mark_products_for_recalculate_discounted_price(product_ids)
         return response

@@ -1,8 +1,8 @@
 import graphene
 
+from ....discount.utils import mark_products_for_recalculate_discounted_price
 from .....permission.enums import ProductPermissions
 from .....product import models
-from .....product.tasks import update_products_discounted_prices_for_promotion_task
 from ....channel import ChannelContext
 from ....core import ResolveInfo
 from ....core.mutations import ModelDeleteMutation
@@ -36,7 +36,7 @@ class CollectionDelete(ModelDeleteMutation):
         for product in products:
             cls.call_event(manager.product_updated, product)
 
-        update_products_discounted_prices_for_promotion_task.delay(
+        mark_products_for_recalculate_discounted_price(
             [product.id for product in products]
         )
 

@@ -22,11 +22,9 @@ SALE_CATALOGUES_ADD_MUTATION = """
 """
 
 
-@patch("saleor.product.tasks.update_discounted_prices_task.delay")
 @patch("saleor.plugins.manager.PluginsManager.sale_updated")
 def test_sale_add_catalogues(
     updated_webhook_mock,
-    update_discounted_prices_task_mock,
     staff_api_client,
     promotion_converted_from_sale_with_empty_predicate,
     category,
@@ -78,7 +76,8 @@ def test_sale_add_catalogues(
     updated_webhook_mock.assert_called_once_with(
         promotion, previous_catalogue, current_catalogue
     )
-    update_discounted_prices_task_mock.assert_called_once()
+    product.refresh_from_db()
+    assert product.recalculate_discounted_price is True
 
 
 @patch("saleor.product.tasks.update_discounted_prices_task.delay")

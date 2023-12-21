@@ -71,13 +71,9 @@ PRODUCT_VARIANT_BULK_UPDATE_MUTATION = """
     "saleor.graphql.product.bulk_mutations."
     "product_variant_bulk_update.get_webhooks_for_event"
 )
-@patch(
-    "saleor.product.tasks.update_products_discounted_prices_for_promotion_task.delay"
-)
 @patch("saleor.plugins.manager.PluginsManager.product_variant_updated")
 def test_product_variant_bulk_update(
     product_variant_created_webhook_mock,
-    update_products_discounted_prices_for_promotion_task_mock,
     mocked_get_webhooks_for_event,
     staff_api_client,
     product_with_single_variant,
@@ -129,20 +125,15 @@ def test_product_variant_bulk_update(
     assert product_with_single_variant.variants.count() == 1
     assert old_name != new_name
     assert product_variant_created_webhook_mock.call_count == data["count"]
-    update_products_discounted_prices_for_promotion_task_mock.assert_called_once_with(
-        [product_with_single_variant.id]
-    )
+    product_with_single_variant.refresh_from_db()
+    assert product_with_single_variant.recalculate_discounted_price is True
 
 
 @patch(
     "saleor.graphql.product.bulk_mutations."
     "product_variant_bulk_update.get_webhooks_for_event"
 )
-@patch(
-    "saleor.product.tasks.update_products_discounted_prices_for_promotion_task.delay"
-)
 def test_product_variant_bulk_update_stocks(
-    update_products_discounted_prices_for_promotion_task_mock,
     mocked_get_webhooks_for_event,
     staff_api_client,
     variant_with_many_stocks,
@@ -207,9 +198,7 @@ def test_product_variant_bulk_update_stocks(
     assert stock_to_update.quantity == new_quantity
     assert variant.stocks.count() == 3
     assert variant.stocks.last().quantity == new_stock_quantity
-    update_products_discounted_prices_for_promotion_task_mock.assert_called_once_with(
-        [variant.product_id]
-    )
+    assert variant.product.recalculate_discounted_price is False
 
 
 def test_product_variant_bulk_update_create_already_existing_stock(
@@ -412,7 +401,7 @@ def test_product_variant_bulk_update_channel_listings_input(
     assert variant.channel_listings.count() == 1
     product_id = graphene.Node.to_global_id("Product", product.pk)
 
-    new_price_for_existing_variant_listing = 50.0
+    new_price_for_existing_variant_listing = 10.0
     not_existing_variant_listing_price = 20.0
 
     variants = [

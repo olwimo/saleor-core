@@ -7,7 +7,6 @@ from ...core.utils.events import call_event
 from ...webhook.event_types import WebhookEventAsyncType
 from ...webhook.utils import get_webhooks_for_event
 from ..models import Product, ProductChannelListing
-from ..tasks import update_products_discounted_prices_for_promotion_task
 
 if TYPE_CHECKING:
     from datetime import date, datetime
@@ -43,6 +42,7 @@ def delete_categories(categories_ids: list[Union[str, int]], manager):
     and update products minimal variant prices.
     """
     from ..models import Category, Product
+    from ...graphql.discount.utils import mark_products_for_recalculate_discounted_price
 
     categories = Category.objects.select_for_update().filter(pk__in=categories_ids)
     categories.prefetch_related("products")
@@ -65,9 +65,7 @@ def delete_categories(categories_ids: list[Union[str, int]], manager):
     for product in products:
         call_event(manager.product_updated, product, webhooks=webhooks)
 
-    update_products_discounted_prices_for_promotion_task.delay(
-        product_ids=[product.id for product in products]
-    )
+    mark_products_for_recalculate_discounted_price([product.id for product in products])
 
 
 def collect_categories_tree_products(category: "Category") -> "QuerySet[Product]":

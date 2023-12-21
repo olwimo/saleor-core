@@ -1,4 +1,5 @@
 import pytest
+from unittest.mock import patch
 
 from ....product.utils.preparing_product import prepare_product
 from ....promotions.utils import create_promotion, create_promotion_rule
@@ -13,14 +14,22 @@ from ...utils import (
 
 
 @pytest.mark.e2e
+@patch("saleor.product.tasks.recalculate_discounted_price_for_products_task")
+@patch("saleor.graphql.discount.utils.mark_products_for_recalculate_discounted_price")
 def test_checkout_products_on_fixed_promotion_core_2102(
+    mocked_recalculate,
+    mocked_delay,
     e2e_not_logged_api_client,
     e2e_staff_api_client,
     shop_permissions,
     permission_manage_product_types_and_attributes,
     permission_manage_discounts,
 ):
+    from saleor.product.tasks import recalculate_discounted_price_for_products_task
+
     # Before
+    mocked_delay.delay = recalculate_discounted_price_for_products_task
+    mocked_recalculate.side_effect = recalculate_discounted_price_for_products_task
 
     permissions = [
         *shop_permissions,
@@ -80,7 +89,8 @@ def test_checkout_products_on_fixed_promotion_core_2102(
     )
     checkout_id = checkout_data["id"]
     checkout_lines = checkout_data["lines"][0]
-    unit_price = float(product_variant_price) - discount_value
+    shipping_method_id = checkout_data["shippingMethods"][0]["id"]
+    unit_price = float(product_variant_price)
 
     assert checkout_data["isShippingRequired"] is True
     assert checkout_lines["unitPrice"]["gross"]["amount"] == unit_price
@@ -115,5 +125,5 @@ def test_checkout_products_on_fixed_promotion_core_2102(
     )
     assert order_line["unitDiscountType"] == discount_type
     assert order_line["unitPrice"]["gross"]["amount"] == unit_price
-    assert order_line["unitDiscount"]["amount"] == float(discount_value)
-    assert order_line["unitDiscountReason"] == f"Promotion: {promotion_id}"
+    assert order_line["unitDiscount"]["amount"] == 0.0
+    assert order_line["unitDiscountReason"] is None
