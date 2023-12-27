@@ -30,9 +30,10 @@ from ..product.filters import (
 PREDICATE_OPERATOR_DATA_T = list[dict[str, Union[list, dict, str, bool]]]
 
 
-class PredicateType(Enum):
+class PredicateObjectType(Enum):
     CATALOGUE = "catalogue"
     CHECKOUT = "checkout"
+    ORDER = "order"
 
 
 class Operators(Enum):
@@ -190,13 +191,13 @@ def get_variants_for_catalogue_predicate(
         return ProductVariant.objects.none()
     if queryset is None:
         queryset = ProductVariant.objects.all()
-    return filter_qs_by_predicate(predicate, queryset, PredicateType.CATALOGUE)
+    return filter_qs_by_predicate(predicate, queryset, PredicateObjectType.CATALOGUE)
 
 
 def filter_qs_by_predicate(
     predicate: dict,
     base_qs: QuerySet,
-    predicate_type: PredicateType,
+    predicate_type: PredicateObjectType,
     currency: Optional[str] = None,
     *,
     result_qs: Optional[QuerySet] = None,
@@ -242,7 +243,7 @@ def _handle_and_data(
     result_qs: QuerySet,
     base_qs: QuerySet,
     data: PREDICATE_OPERATOR_DATA_T,
-    predicate_type: PredicateType,
+    predicate_type: PredicateObjectType,
     currency: Optional[str] = None,
 ) -> QuerySet:
     for predicate_data in data:
@@ -266,7 +267,7 @@ def _handle_or_data(
     result_qs: QuerySet,
     base_qs: QuerySet,
     data: PREDICATE_OPERATOR_DATA_T,
-    predicate_type: PredicateType,
+    predicate_type: PredicateObjectType,
     currency: Optional[str] = None,
 ) -> QuerySet:
     qs = result_qs.model.objects.none()
@@ -292,12 +293,12 @@ def _handle_predicate(
     base_qs: QuerySet,
     predicate_data: dict[str, Union[dict, str, list, bool]],
     operator: Operators,
-    predicate_type: PredicateType,
+    predicate_type: PredicateObjectType,
     currency: Optional[str] = None,
 ):
-    if predicate_type == PredicateType.CATALOGUE:
+    if predicate_type == PredicateObjectType.CATALOGUE:
         return _handle_catalogue_predicate(result_qs, base_qs, predicate_data, operator)
-    elif predicate_type == PredicateType.CHECKOUT:
+    elif predicate_type == PredicateObjectType.CHECKOUT:
         return _handle_checkout_predicate(
             result_qs, base_qs, predicate_data, operator, currency
         )
