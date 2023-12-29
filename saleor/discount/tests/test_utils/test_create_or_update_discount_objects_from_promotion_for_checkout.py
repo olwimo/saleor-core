@@ -4,19 +4,23 @@ import graphene
 import pytest
 from django.utils import timezone
 from freezegun import freeze_time
+from prices import Money, TaxedMoney
 
 from ....discount.interface import VariantPromotionRuleInfo
 from ....product.models import VariantChannelListingPromotionRule
-from ... import DiscountType, RewardValueType
+from ... import DiscountType, RewardType, RewardValueType
 from ...models import CheckoutLineDiscount, PromotionRule
 from ...utils import create_or_update_discount_objects_from_promotion_for_checkout
 
 
 def test_create_or_update_discount_objects_from_promotion_for_checkout_no_discount(
+    checkout_info,
     checkout_lines_info,
 ):
     # when
-    create_or_update_discount_objects_from_promotion_for_checkout(checkout_lines_info)
+    create_or_update_discount_objects_from_promotion_for_checkout(
+        checkout_info, checkout_lines_info
+    )
 
     # then
     for checkout_line_info in checkout_lines_info:
@@ -25,7 +29,10 @@ def test_create_or_update_discount_objects_from_promotion_for_checkout_no_discou
 
 @freeze_time("2020-12-12 12:00:00")
 def test_create_fixed_discount(
-    checkout_lines_info, promotion_without_rules, promotion_translation_fr
+    checkout_info,
+    checkout_lines_info,
+    promotion_without_rules,
+    promotion_translation_fr,
 ):
     # given
     line_info1 = checkout_lines_info[0]
@@ -66,7 +73,9 @@ def test_create_fixed_discount(
     ]
 
     # when
-    create_or_update_discount_objects_from_promotion_for_checkout(checkout_lines_info)
+    create_or_update_discount_objects_from_promotion_for_checkout(
+        checkout_info, checkout_lines_info
+    )
 
     # then
     assert len(line_info1.discounts) == 1
@@ -106,7 +115,7 @@ def test_create_fixed_discount(
 
 @freeze_time("2020-12-12 12:00:00")
 def test_create_fixed_discount_multiple_quantity_in_lines(
-    checkout_lines_with_multiple_quantity_info, promotion_without_rules
+    checkout_info, checkout_lines_with_multiple_quantity_info, promotion_without_rules
 ):
     # given
     line_info1 = checkout_lines_with_multiple_quantity_info[0]
@@ -149,7 +158,7 @@ def test_create_fixed_discount_multiple_quantity_in_lines(
 
     # when
     create_or_update_discount_objects_from_promotion_for_checkout(
-        checkout_lines_with_multiple_quantity_info
+        checkout_info, checkout_lines_with_multiple_quantity_info
     )
 
     # then
@@ -184,7 +193,7 @@ def test_create_fixed_discount_multiple_quantity_in_lines(
 
 
 def test_create_fixed_discount_multiple_quantity_in_lines_discount_bigger_than_total(
-    checkout_lines_with_multiple_quantity_info, promotion_without_rules
+    checkout_info, checkout_lines_with_multiple_quantity_info, promotion_without_rules
 ):
     # given
     line_info1 = checkout_lines_with_multiple_quantity_info[0]
@@ -229,7 +238,7 @@ def test_create_fixed_discount_multiple_quantity_in_lines_discount_bigger_than_t
 
     # when
     create_or_update_discount_objects_from_promotion_for_checkout(
-        checkout_lines_with_multiple_quantity_info
+        checkout_info, checkout_lines_with_multiple_quantity_info
     )
 
     # then
@@ -255,7 +264,9 @@ def test_create_fixed_discount_multiple_quantity_in_lines_discount_bigger_than_t
 
 
 @freeze_time("2020-12-12 12:00:00")
-def test_create_percentage_discount(checkout_lines_info, promotion_without_rules):
+def test_create_percentage_discount(
+    checkout_info, checkout_lines_info, promotion_without_rules
+):
     # given
     line_info1 = checkout_lines_info[0]
     product_line1 = line_info1.product
@@ -297,7 +308,9 @@ def test_create_percentage_discount(checkout_lines_info, promotion_without_rules
     ]
 
     # when
-    create_or_update_discount_objects_from_promotion_for_checkout(checkout_lines_info)
+    create_or_update_discount_objects_from_promotion_for_checkout(
+        checkout_info, checkout_lines_info
+    )
 
     # then
     assert len(line_info1.discounts) == 1
@@ -334,7 +347,7 @@ def test_create_percentage_discount(checkout_lines_info, promotion_without_rules
 
 @freeze_time("2020-12-12 12:00:00")
 def test_create_percentage_discount_multiple_quantity_in_lines(
-    checkout_lines_with_multiple_quantity_info, promotion_without_rules
+    checkout_info, checkout_lines_with_multiple_quantity_info, promotion_without_rules
 ):
     # given
     line_info1 = checkout_lines_with_multiple_quantity_info[0]
@@ -380,7 +393,7 @@ def test_create_percentage_discount_multiple_quantity_in_lines(
 
     # when
     create_or_update_discount_objects_from_promotion_for_checkout(
-        checkout_lines_with_multiple_quantity_info
+        checkout_info, checkout_lines_with_multiple_quantity_info
     )
 
     # then
@@ -414,7 +427,7 @@ def test_create_percentage_discount_multiple_quantity_in_lines(
 
 
 def test_create_discount_multiple_rules_applied(
-    checkout_lines_info, promotion_without_rules
+    checkout_info, checkout_lines_info, promotion_without_rules
 ):
     # given
     line_info1 = checkout_lines_info[0]
@@ -500,7 +513,9 @@ def test_create_discount_multiple_rules_applied(
     ]
 
     # when
-    create_or_update_discount_objects_from_promotion_for_checkout(checkout_lines_info)
+    create_or_update_discount_objects_from_promotion_for_checkout(
+        checkout_info, checkout_lines_info
+    )
 
     # then
     assert len(line_info1.discounts) == 2
@@ -533,7 +548,7 @@ def test_create_discount_multiple_rules_applied(
 
 
 def test_two_promotions_applied_to_two_different_lines(
-    checkout_lines_info, promotion_without_rules
+    checkout_info, checkout_lines_info, promotion_without_rules
 ):
     # given
     line_info1 = checkout_lines_info[0]
@@ -624,7 +639,9 @@ def test_two_promotions_applied_to_two_different_lines(
     ]
 
     # when
-    create_or_update_discount_objects_from_promotion_for_checkout(checkout_lines_info)
+    create_or_update_discount_objects_from_promotion_for_checkout(
+        checkout_info, checkout_lines_info
+    )
 
     # then
     assert len(line_info1.discounts) == 1
@@ -692,7 +709,7 @@ def test_two_promotions_applied_to_two_different_lines(
 
 @freeze_time("2020-12-12 12:00:00")
 def test_create_percentage_discount_1_cent_variant_on_10_percentage_discount(
-    checkout_lines_info, promotion_without_rules
+    checkout_info, checkout_lines_info, promotion_without_rules
 ):
     # given
     line_info1 = checkout_lines_info[0]
@@ -746,7 +763,9 @@ def test_create_percentage_discount_1_cent_variant_on_10_percentage_discount(
     ]
 
     # when
-    create_or_update_discount_objects_from_promotion_for_checkout(checkout_lines_info)
+    create_or_update_discount_objects_from_promotion_for_checkout(
+        checkout_info, checkout_lines_info
+    )
 
     # then
     assert len(line_info1.discounts) == 1
@@ -781,7 +800,9 @@ def test_create_percentage_discount_1_cent_variant_on_10_percentage_discount(
         assert not checkout_line_info.discounts
 
 
-def test_promotion_not_valid_anymore(checkout_lines_info, promotion_without_rules):
+def test_promotion_not_valid_anymore(
+    checkout_info, checkout_lines_info, promotion_without_rules
+):
     # given
     line_info1 = checkout_lines_info[0]
     product_line1 = line_info1.product
@@ -815,7 +836,9 @@ def test_promotion_not_valid_anymore(checkout_lines_info, promotion_without_rule
     line_info1.discounts = [line_discount]
 
     # when
-    create_or_update_discount_objects_from_promotion_for_checkout(checkout_lines_info)
+    create_or_update_discount_objects_from_promotion_for_checkout(
+        checkout_info, checkout_lines_info
+    )
 
     # then
     assert len(line_info1.discounts) == 0
@@ -824,7 +847,7 @@ def test_promotion_not_valid_anymore(checkout_lines_info, promotion_without_rule
 
 
 def test_one_of_promotion_rule_not_valid_anymore_one_updated(
-    checkout_lines_info, promotion_without_rules
+    checkout_info, checkout_lines_info, promotion_without_rules
 ):
     # given
     line_info1 = checkout_lines_info[0]
@@ -911,7 +934,9 @@ def test_one_of_promotion_rule_not_valid_anymore_one_updated(
     ]
 
     # when
-    create_or_update_discount_objects_from_promotion_for_checkout(checkout_lines_info)
+    create_or_update_discount_objects_from_promotion_for_checkout(
+        checkout_info, checkout_lines_info
+    )
 
     # then
     assert len(line_info1.discounts) == 1
@@ -945,7 +970,10 @@ def test_one_of_promotion_rule_not_valid_anymore_one_updated(
 
 
 def test_create_discount_with_promotion_translation(
-    checkout_lines_info, promotion_without_rules, promotion_translation_fr
+    checkout_info,
+    checkout_lines_info,
+    promotion_without_rules,
+    promotion_translation_fr,
 ):
     # given
     line_info1 = checkout_lines_info[0]
@@ -986,7 +1014,9 @@ def test_create_discount_with_promotion_translation(
     ]
 
     # when
-    create_or_update_discount_objects_from_promotion_for_checkout(checkout_lines_info)
+    create_or_update_discount_objects_from_promotion_for_checkout(
+        checkout_info, checkout_lines_info
+    )
 
     # then
     assert len(line_info1.discounts) == 1
@@ -1004,7 +1034,10 @@ def test_create_discount_with_promotion_translation(
 
 
 def test_create_discount_with_rule_translation(
-    checkout_lines_info, promotion_without_rules, promotion_rule_translation_fr
+    checkout_info,
+    checkout_lines_info,
+    promotion_without_rules,
+    promotion_rule_translation_fr,
 ):
     # given
     line_info1 = checkout_lines_info[0]
@@ -1045,7 +1078,9 @@ def test_create_discount_with_rule_translation(
     ]
 
     # when
-    create_or_update_discount_objects_from_promotion_for_checkout(checkout_lines_info)
+    create_or_update_discount_objects_from_promotion_for_checkout(
+        checkout_info, checkout_lines_info
+    )
 
     # then
     assert len(line_info1.discounts) == 1
@@ -1063,6 +1098,7 @@ def test_create_discount_with_rule_translation(
 
 
 def test_create_discount_with_promotion_and_rule_translation(
+    checkout_info,
     checkout_lines_info,
     promotion_without_rules,
     promotion_translation_fr,
@@ -1107,7 +1143,9 @@ def test_create_discount_with_promotion_and_rule_translation(
     ]
 
     # when
-    create_or_update_discount_objects_from_promotion_for_checkout(checkout_lines_info)
+    create_or_update_discount_objects_from_promotion_for_checkout(
+        checkout_info, checkout_lines_info
+    )
 
     # then
     assert len(line_info1.discounts) == 1
@@ -1122,3 +1160,116 @@ def test_create_discount_with_promotion_and_rule_translation(
 
     for checkout_line_info in checkout_lines_info[1:]:
         assert not checkout_line_info.discounts
+
+
+def test_create_or_update_discount_objects_from_promotion_for_checkout_voucher_set(
+    checkout_info, checkout_lines_info, checkout_and_order_promotion_rule, voucher
+):
+    # given
+    checkout_info.voucher = voucher
+    checkout_info.checkout.voucher_code = voucher.code
+
+    # when
+    create_or_update_discount_objects_from_promotion_for_checkout(
+        checkout_info, checkout_lines_info
+    )
+
+    # then
+    assert not checkout_info.discounts
+    assert not checkout_info.checkout.discounts.all()
+
+
+def test_create_or_update_discount_objects_from_promotion_no_applicable_rules(
+    checkout_info, checkout_lines_info, checkout_and_order_promotion_rule, voucher
+):
+    # given
+    checkout = checkout_info.checkout
+    price = Money("10", checkout_info.checkout.currency)
+    checkout.total = TaxedMoney(net=price, gross=price)
+
+    # when
+    create_or_update_discount_objects_from_promotion_for_checkout(
+        checkout_info, checkout_lines_info
+    )
+
+    # then
+    assert not checkout_info.discounts
+    assert not checkout_info.checkout.discounts.all()
+
+
+def test_create_or_update_discount_objects_from_promotion(
+    checkout_info,
+    checkout_lines_info,
+    promotion_without_rules,
+):
+    # given
+    promotion = promotion_without_rules
+    checkout = checkout_info.checkout
+    price = Money("30", checkout_info.checkout.currency)
+    checkout.total = TaxedMoney(net=price, gross=price)
+    checkout.subtotal = TaxedMoney(net=price, gross=price)
+    checkout.save(
+        update_fields=[
+            "total_net_amount",
+            "total_gross_amount",
+            "subtotal_net_amount",
+            "subtotal_gross_amount",
+        ]
+    )
+
+    rules = PromotionRule.objects.bulk_create(
+        [
+            PromotionRule(
+                name="Checkout and order promotion rule 1",
+                promotion=promotion,
+                checkout_and_order_predicate={
+                    "subtotal_price": {
+                        "range": {
+                            "gte": 10,
+                        }
+                    }
+                },
+                reward_value_type=RewardValueType.PERCENTAGE,
+                reward_value=Decimal("25"),
+                reward_type=RewardType.SUBTOTAL_DISCOUNT,
+            ),
+            PromotionRule(
+                name="Checkout and order promotion rule 2",
+                promotion=promotion,
+                checkout_and_order_predicate={
+                    "total_price": {
+                        "range": {
+                            "gte": 20,
+                        }
+                    }
+                },
+                reward_value_type=RewardValueType.PERCENTAGE,
+                reward_value=Decimal("50"),
+                reward_type=RewardType.SUBTOTAL_DISCOUNT,
+            ),
+        ]
+    )
+    for rule in rules:
+        rule.channels.add(checkout_info.channel)
+
+    # when
+    create_or_update_discount_objects_from_promotion_for_checkout(
+        checkout_info, checkout_lines_info
+    )
+
+    # then
+    assert checkout_info.checkout.discounts.count() == 1
+    assert len(checkout_info.discounts) == 1
+    assert checkout_info.discounts[0].promotion_rule == rules[1]
+    # TODO: check this as lack of subtotal_price filter
+    # resulting in returning all rules for some reason - TO FIX!
+
+
+def test_create_or_update_discount_objects_from_promotion_best_rule_applies(
+    checkout_info,
+    checkout_lines_info,
+    promotion_without_rules,
+):
+    # TODO:
+    # mock subtotal and total return, add one fixed, one percentage rule
+    pass

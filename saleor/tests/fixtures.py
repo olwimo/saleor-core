@@ -54,6 +54,7 @@ from ..discount import (
     DiscountType,
     DiscountValueType,
     PromotionEvents,
+    RewardType,
     RewardValueType,
     VoucherType,
 )
@@ -5722,6 +5723,7 @@ def checkout_and_order_promotion_rule(channel_USD, promotion, product):
         },
         reward_value_type=RewardValueType.PERCENTAGE,
         reward_value=Decimal("25"),
+        reward_type=RewardType.SUBTOTAL_DISCOUNT,
     )
     rule.channels.add(channel_USD)
     return rule
