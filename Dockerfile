@@ -48,14 +48,20 @@ COPY --from=build-python /usr/local/bin/ /usr/local/bin/
 COPY . /app
 WORKDIR /app
 
+ARG SECRET_KEY
+ENV SECRET_KEY ${SECRET_KEY:-dummy}
+
+ARG MEDIA_URL
+ENV MEDIA_URL ${MEDIA_URL:-/media/}
+
 ARG STATIC_URL
 ENV STATIC_URL ${STATIC_URL:-/static/}
-RUN SECRET_KEY=dummy STATIC_URL=${STATIC_URL} python3 manage.py collectstatic --no-input
+RUN SECRET_KEY=${SECRET_KEY} STATIC_URL=${STATIC_URL} python3 manage.py collectstatic --no-input
 
 EXPOSE 8000
 ENV PYTHONUNBUFFERED 1
 
-LABEL org.opencontainers.image.title="saleor/saleor"                                  \
+LABEL org.opencontainers.image.title="olwimo/saleor-core"                                  \
       org.opencontainers.image.description="\
 A modular, high performance, headless e-commerce platform built with Python, \
 GraphQL, Django, and ReactJS."                                                         \
